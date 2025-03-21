@@ -1,0 +1,42 @@
+<form action="<?php echo _url('extension', 'configure', 'e', urlencode($this->getName())); ?>" method="post">
+    <input type="hidden" name="_csrf" value="<?php echo FreshRSS_Auth::csrfToken(); ?>" />
+    
+    <div class="form-group">
+        <label class="group-name" for="openai_api_key"><?php echo _t('ext.ai_marker.openai_api_key'); ?></label>
+        <div class="group-controls">
+            <input type="text" name="openai_api_key" id="openai_api_key" value="<?php echo $this->openai_api_key; ?>" />
+            <p class="help"><?php echo _t('ext.ai_marker.openai_api_key_help'); ?></p>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="group-name" for="openai_proxy_url"><?php echo _t('ext.ai_marker.openai_proxy_url'); ?></label>
+        <div class="group-controls">
+            <input type="text" name="openai_proxy_url" id="openai_proxy_url" value="<?php echo $this->openai_proxy_url; ?>" />
+            <p class="help"><?php echo _t('ext.ai_marker.openai_proxy_url_help'); ?></p>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="group-name" for="openai_model"><?php echo _t('ext.ai_marker.openai_model'); ?></label>
+        <div class="group-controls">
+            <input type="text" name="openai_model" id="openai_model" value="<?php echo $this->openai_model; ?>" placeholder="gpt-3.5-turbo" />
+            <p class="help"><?php echo _t('ext.ai_marker.openai_model_help'); ?></p>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label class="group-name" for="system_prompt"><?php echo _t('ext.ai_marker.system_prompt'); ?></label>
+        <div class="group-controls">
+            <textarea name="system_prompt" id="system_prompt" rows="5" style="width: 100%;"><?php echo $this->system_prompt; ?></textarea>
+            <p class="help"><?php echo _t('ext.ai_marker.system_prompt_help'); ?></p>
+        </div>
+    </div>
+    
+    <div class="form-group form-actions">
+        <div class="group-controls">
+            <button type="submit" class="btn btn-important"><?php echo _t('gen.action.submit'); ?></button>
+            <button type="reset" class="btn"><?php echo _t('gen.action.cancel'); ?></button>
+        </div>
+    </div>
+</form>

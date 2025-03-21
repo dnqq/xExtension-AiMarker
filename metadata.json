@@ -1,0 +1,8 @@
+{
+	"name": "AI Marker",
+	"author": "Your Name",
+	"description": "使用LLM智能过滤文章，将无用的文章标记为已读以减少信息过载。",
+	"version": 0.1,
+	"entrypoint": "AiMarker",
+	"type": "user"
+}
