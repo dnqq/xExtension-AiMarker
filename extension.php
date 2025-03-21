@@ -3,59 +3,36 @@
 class AiMarkerExtension extends Minz_Extension {
 	private $default_system_prompt;
 
+	// 定义配置默认值常量
+	const DEFAULT_MODEL = 'gpt-3.5-turbo';
+
 	public function init() {
 		$this->registerTranslates();
 		
 		// 获取默认系统提示词
 		$this->default_system_prompt = _t('ext.ai_marker.default_system_prompt');
 		
-		// 注册钩子，在文章显示前进行处理
-		$this->registerHook('entry_before_display', array($this, 'processArticleHook'));
-		
-		// 预处理配置
-		$this->loadConfigValues();
+		// 注册钩子，在文章入库前进行处理，避免重复判断
+		$this->registerHook('entry_before_insert', array($this, 'processArticleHook'));
 	}
 	
 	public function handleConfigureAction() {
 		$this->registerTranslates();
 		
 		if (Minz_Request::isPost()) {
-			$this->saveConfiguration(
-				Minz_Request::param('openai_api_key', ''),
-				Minz_Request::param('openai_proxy_url', ''),
-				Minz_Request::param('openai_model', 'gpt-3.5-turbo'),
-				Minz_Request::param('system_prompt', $this->default_system_prompt)
-			);
+			FreshRSS_Context::$user_conf->openai_api_key = Minz_Request::param('openai_api_key', '');
+			FreshRSS_Context::$user_conf->openai_proxy_url = Minz_Request::param('openai_proxy_url', '');
+			FreshRSS_Context::$user_conf->openai_model = Minz_Request::param('openai_model', self::DEFAULT_MODEL);
+			FreshRSS_Context::$user_conf->system_prompt = Minz_Request::param('system_prompt', $this->default_system_prompt);
+			FreshRSS_Context::$user_conf->save();
 			
 			Minz_Request::good(_t('feedback.conf.updated'), array(
 				'params' => array('config' => 'display')
 			));
 		}
-		
-		// 将配置值传递给视图
-		$this->loadConfigValues();
 	}
 	
-	private function loadConfigValues() {
-		$this->openai_api_key = $this->getConfigValue('openai_api_key', '');
-		$this->openai_proxy_url = $this->getConfigValue('openai_proxy_url', '');
-		$this->openai_model = $this->getConfigValue('openai_model', 'gpt-3.5-turbo');
-		$this->system_prompt = $this->getConfigValue('system_prompt', $this->default_system_prompt);
-	}
-	
-	private function saveConfiguration($api_key, $proxy_url, $model, $system_prompt) {
-		$this->setConfigValue('openai_api_key', $api_key);
-		$this->setConfigValue('openai_proxy_url', $proxy_url);
-		$this->setConfigValue('openai_model', $model);
-		$this->setConfigValue('system_prompt', $system_prompt);
-	}
-
 	public function processArticleHook($entry) {
-		if ($entry->isRead()) {
-			// 文章已经被标记为已读，不需要进一步处理
-			return $entry;
-		}
-		
 		// 获取文章内容
 		$title = $entry->title();
 		$content = $entry->content();
@@ -73,15 +50,17 @@ class AiMarkerExtension extends Minz_Extension {
 	}
 	
 	private function askLLM($title, $content) {
-		$api_key = $this->getConfigValue('openai_api_key', '');
+		// 从用户配置中获取API密钥
+		$api_key = FreshRSS_Context::$user_conf->openai_api_key ?? '';
 		if (empty($api_key)) {
 			Minz_Log::error(_t('ext.ai_marker.error_missing_api_key'));
 			return 'USEFUL'; // 默认认为有用，以避免错误地过滤内容
 		}
 		
-		$proxy_url = $this->getConfigValue('openai_proxy_url', '');
-		$model = $this->getConfigValue('openai_model', 'gpt-3.5-turbo');
-		$system_prompt = $this->getConfigValue('system_prompt', $this->default_system_prompt);
+		// 获取其他配置
+		$proxy_url = FreshRSS_Context::$user_conf->openai_proxy_url ?? '';
+		$model = FreshRSS_Context::$user_conf->openai_model ?? self::DEFAULT_MODEL;
+		$system_prompt = FreshRSS_Context::$user_conf->system_prompt ?? $this->default_system_prompt;
 		
 		// 准备向OpenAI API发送请求
 		$api_url = !empty($proxy_url) ? $proxy_url : 'https://api.openai.com/v1/chat/completions';
