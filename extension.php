@@ -47,14 +47,22 @@ class AiMarkerExtension extends Minz_Extension {
 		
 		// 如果有返回JSON数据
 		if (is_array($result)) {
-			// 提取abstract添加到内容前
-			if (!empty($result['abstract'])) {
-				$entry->_content('<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . $result['abstract'] . '</div>' . $content);
+			// 准备摘要内容
+			$abstractHtml = '';
+			
+			// 添加翻译标题（如果有且原标题不是中文）
+			if (!empty($result['translated_title']) && !$this->containsChinese($title)) {
+				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>[翻译标题]：</strong>' . $result['translated_title'] . '</div>';
 			}
 			
-			// 如果有翻译标题，设置为新标题
-			if (!empty($result['translated_title'])) {
-				$entry->_title($result['translated_title']);
+			// 添加文章摘要（如果有）
+			if (!empty($result['abstract'])) {
+				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . $result['abstract'] . '</div>';
+			}
+			
+			// 如果有摘要或翻译标题，添加到内容前
+			if (!empty($abstractHtml)) {
+				$entry->_content($abstractHtml . $content);
 			}
 			
 			// 如果有标签，设置为文章标签
@@ -196,6 +204,16 @@ class AiMarkerExtension extends Minz_Extension {
 		Minz_Log::debug('内容清理: 原始长度 ' . strlen($content) . ' -> 清理后长度 ' . strlen($cleaned));
 		
 		return trim($cleaned);
+	}
+	
+	/**
+	 * 检测字符串是否包含中文
+	 * 
+	 * @param string $str 要检测的字符串
+	 * @return boolean 如果包含中文返回true，否则返回false
+	 */
+	private function containsChinese($str) {
+		return preg_match('/[\x{4e00}-\x{9fa5}]/u', $str) > 0;
 	}
 	
 	private function sendRequest($url, $data, $api_key) {
