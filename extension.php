@@ -108,6 +108,9 @@ class AiMarkerExtension extends Minz_Extension {
 		$model = FreshRSS_Context::$user_conf->openai_model ?? self::DEFAULT_MODEL;
 		$system_prompt = FreshRSS_Context::$user_conf->system_prompt ?? $this->default_system_prompt;
 		
+		// 清理内容，移除HTML标签和实体编码
+		$cleanedContent = $this->cleanContent($content);
+		
 		// 准备向OpenAI API发送请求
 		$api_url = !empty($proxy_url) ? $proxy_url : 'https://api.openai.com/v1/chat/completions';
 		
@@ -121,7 +124,7 @@ class AiMarkerExtension extends Minz_Extension {
 				),
 				array(
 					'role' => 'user',
-					'content' => "标题: $title\n\n内容: $content"
+					'content' => "标题: $title\n\n内容: $cleanedContent"
 				)
 			),
 			'temperature' => 0.1 // 低温度以获得更确定的回答
@@ -171,6 +174,28 @@ class AiMarkerExtension extends Minz_Extension {
 		
 		// 默认返回USEFUL
 		return 'USEFUL';
+	}
+	
+	/**
+	 * 清理HTML内容，转换为纯文本
+	 * 
+	 * @param string $content HTML内容
+	 * @return string 清理后的纯文本
+	 */
+	private function cleanContent($content) {
+		// 解码HTML实体
+		$decoded = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		
+		// 移除HTML标签，保留其文本内容
+		$textOnly = strip_tags($decoded);
+		
+		// 移除多余的空白
+		$cleaned = preg_replace('/\s+/', ' ', $textOnly);
+		
+		// 记录内容长度变化，用于调试
+		Minz_Log::debug('内容清理: 原始长度 ' . strlen($content) . ' -> 清理后长度 ' . strlen($cleaned));
+		
+		return trim($cleaned);
 	}
 	
 	private function sendRequest($url, $data, $api_key) {
