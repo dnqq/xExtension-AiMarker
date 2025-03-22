@@ -52,8 +52,24 @@ class AiMarkerExtension extends Minz_Extension {
 			
 			// 添加翻译标题（如果有且原标题不是中文）
 			if (!empty($result['translated_title']) && !$this->containsChinese($title)) {
-				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>[翻译标题]：</strong>' . $result['translated_title'] . '</div>';
+				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>[标题]：</strong>' . $result['translated_title'] . '</div>';
 			}
+
+            // 添加评分和理由（如果有）
+            if (isset($result['quality_score']) && is_numeric($result['quality_score'])) {
+                $score = (float)$result['quality_score'];
+                $scoreColor = $score < 3.0 ? '#e53935' : '#4caf50'; // 低于3分显示红色，否则显示绿色
+
+                $abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid ' . $scoreColor . '; color: #333;">';
+                $abstractHtml .= '<strong>[评分]：</strong>' . $score;
+
+                // 如果有评价理由，添加到评分后面
+                if (!empty($result['evaluation_reason'])) {
+                    $abstractHtml .= '<br><strong>[理由]：</strong>' . $result['evaluation_reason'];
+                }
+
+                $abstractHtml .= '</div>';
+            }
 			
 			// 添加文章摘要（如果有）
 			if (!empty($result['abstract'])) {
