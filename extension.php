@@ -12,7 +12,7 @@ class AiMarkerExtension extends Minz_Extension {
 		// 获取默认系统提示词
 		$this->default_system_prompt = _t('ext.ai_marker.default_system_prompt');
 		
-		// 注册钩子，在文章入库前进行处理，避免重复判断
+		// 注册钩子，在文章显示前进行处理
 		$this->registerHook('entry_before_insert', array($this, 'processArticleHook'));
 	}
 	
@@ -33,18 +33,64 @@ class AiMarkerExtension extends Minz_Extension {
 	}
 	
 	public function processArticleHook($entry) {
-		// 获取文章内容
+		// 已读文章不需要处理
+		if ($entry->isRead()) {
+			return $entry;
+		}
+		
+		// 获取文章标题和内容
 		$title = $entry->title();
 		$content = $entry->content();
 		
 		// 调用LLM进行判断
 		$result = $this->askLLM($title, $content);
 		
-		if ($result === 'USELESS') {
-			// 如果LLM判断文章无用，将其标记为已读
-			$entry->_isRead(true);
-			Minz_Log::debug(_t('ext.ai_marker.article_marked_read') . ': ' . $title);
-		}
+		// 如果有返回JSON数据
+		if (is_array($result)) {
+			// 提取abstract添加到内容前
+			if (!empty($result['abstract'])) {
+				$entry->_content('<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . $result['abstract'] . '</div>' . $content);
+			}
+			
+			// 如果有翻译标题，设置为新标题
+			if (!empty($result['translated_title'])) {
+				$entry->_title($result['translated_title']);
+			}
+			
+			// 如果有标签，设置为文章标签
+			if (!empty($result['tags']) && is_array($result['tags'])) {
+				// 将现有标签和AI生成的标签合并
+				$currentTags = $entry->tags();
+				$aiTags = $result['tags'];
+				
+				// 确保所有标签都是字符串
+				foreach ($aiTags as &$tag) {
+					$tag = (string)$tag;
+				}
+				
+				// 合并标签并去重
+				$allTags = array_unique(array_merge($currentTags, $aiTags));
+				
+				// 设置文章标签
+				$entry->_tags($allTags);
+				Minz_Log::debug("已添加AI生成的标签: " . implode(', ', $aiTags));
+			}
+			
+			// 判断文章是否值得阅读
+			$isWorthReading = true;
+			
+			// 检查quality_score是否大于3.0
+			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < 3.0) {
+				$isWorthReading = false;
+				Minz_Log::debug("文章得分:" . $result['quality_score'] . "，认为不值得阅读: " . $title);
+			}
+			
+			// 如果不值得阅读，标记为已读
+			if (!$isWorthReading) {
+				$entry->_isRead(true);
+				Minz_Log::debug(_t('ext.ai_marker.article_marked_read') . ': ' . $title);
+			}
+		} 
 		
 		return $entry;
 	}
@@ -95,13 +141,23 @@ class AiMarkerExtension extends Minz_Extension {
 					$jsonStr = $matches[0];
 					$contentJson = json_decode($jsonStr, true);
 					
-					// 检查JSON中是否包含evaluation字段
-					if ($contentJson && isset($contentJson['evaluation'])) {
-						$value = strtoupper(trim($contentJson['evaluation']));
-						if ($value === 'USELESS') {
-							return 'USELESS';
-						} elseif ($value === 'USEFUL') {
-							return 'USEFUL';
+					// 检查是否成功解析为JSON
+					if ($contentJson) {
+						// 检查是否包含新格式的字段
+						if (isset($contentJson['reading_recommendation']) || 
+						    isset($contentJson['abstract']) || 
+						    isset($contentJson['translated_title'])) {
+							return $contentJson;
+						}
+						
+						// 向下兼容旧格式
+						if (isset($contentJson['evaluation'])) {
+							$value = strtoupper(trim($contentJson['evaluation']));
+							if ($value === 'USELESS') {
+								return 'USELESS';
+							} elseif ($value === 'USEFUL') {
+								return 'USEFUL';
+							}
 						}
 					}
 				}
