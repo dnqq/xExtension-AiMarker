@@ -14,9 +14,6 @@ class AiMarkerExtension extends Minz_Extension {
 		
 		// 注册钩子，在文章插入前进行处理
 		$this->registerHook('entry_before_insert', array($this, 'processArticleHook'));
-
-		// 注册钩子，在文章展示前进行处理
-                // $this->registerHook('entry_before_display', array($this, 'displayArticleHook'));
 	}
 	
 	public function handleConfigureAction() {
@@ -35,32 +32,12 @@ class AiMarkerExtension extends Minz_Extension {
 		}
 	}
 
-    public function displayArticleHook($entry) {
-        $content = $entry->content();
-
-        // 检查内容是否以翻译标题块开始
-        if (preg_match('/<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>\[标题\]：<\/strong>(.*?)<\/div>/s', $content, $matches)) {
-            // 提取翻译后的标题
-            $translatedTitle = $matches[1];
-
-            // 替换原标题
-            $entry->_title($translatedTitle);
-
-            // 从内容中移除翻译标题块
-            $newContent = preg_replace('/<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>\[标题\]：<\/strong>.*?<\/div>/s', '', $content, 1);
-
-            // 更新内容
-            $entry->_content($newContent);
-
-            // 记录日志
-            // Minz_Log::debug("已用翻译标题替换原标题: " . $translatedTitle);
-        }
-
-        return $entry;
-    }
-
 	
 	public function processArticleHook($entry) {
+
+		// 存储文档原本的hash值，注：因为文档会根据title和内容作者进行hash排重，下面会修改相关的信息，所以预先保存
+		$originalHash = $entry->hash();
+
 		// 已读文章不需要处理
 		if ($entry->isRead()) {
 			return $entry;
@@ -69,12 +46,6 @@ class AiMarkerExtension extends Minz_Extension {
 		// 获取文章标题和内容
 		$title = $entry->title();
 		$content = $entry->content();
-
-		// 检查内容是否已经包含翻译标题块，如果有就不再处理
-        if (preg_match('/<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>\[标题\]：<\/strong>/s', $content)) {
-            Minz_Log::debug("文章已有翻译标题，跳过处理: " . $title);
-            return $entry;
-        }
 		
 		// 调用LLM进行判断
 		$result = $this->askLLM($title, $content);
@@ -87,7 +58,7 @@ class AiMarkerExtension extends Minz_Extension {
 			// 添加翻译标题（如果有且原标题不是中文）
 			if (!empty($result['translated_title']) && !$this->containsChinese($title)) {
 				// $abstractHtml .= '<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>[标题]：</strong>' . $result['translated_title'] . '</div>';
-			        $entry->_title($result['translated_title']);
+			    $entry->_title($result['translated_title']);
 			}
 
             // 添加评分和理由（如果有）
@@ -137,17 +108,19 @@ class AiMarkerExtension extends Minz_Extension {
 			// 判断文章是否值得阅读
 			$isWorthReading = true;
 			
-			// 检查quality_score是否大于3.5
-			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < 3.6) {
+			// 检查quality_score是否大于4
+			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < 4,0) {
 				$isWorthReading = false;
-				Minz_Log::debug("文章得分:" . $result['quality_score'] . "，认为不值得阅读: " . $title);
+				Minz_Log::debug("文章得分:" . $result['quality_score'] . "，非必读文章: " . $title);
 			}
 			
-			// 如果不值得阅读，标记为已读
+			// 如果非必读文章，标记为已读
 			if (!$isWorthReading) {
 				$entry->_isRead(true);
 			}
 		} 
+
+		$entry->_hash($originalHash);
 		
 		return $entry;
 	}
