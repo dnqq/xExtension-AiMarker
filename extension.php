@@ -109,7 +109,7 @@ class AiMarkerExtension extends Minz_Extension {
 			$isWorthReading = true;
 			
 			// 检查quality_score是否大于4
-			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < 4,0) {
+			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < 4.0) {
 				$isWorthReading = false;
 				Minz_Log::debug("文章得分:" . $result['quality_score'] . "，非必读文章: " . $title);
 			}
