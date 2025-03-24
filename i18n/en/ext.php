@@ -10,6 +10,8 @@ return array(
 		'openai_model_help' => 'Enter the OpenAI model name (e.g., gpt-3.5-turbo, gpt-4, gpt-4-turbo). You can use any model supported by OpenAI API.',
 		'system_prompt' => 'System Prompt',
 		'system_prompt_help' => 'Instructions for the AI on how to analyze articles and generate a JSON response with evaluation, summary, and translated title.',
+		'thread_score' => 'Thread Score for Article',
+		'thread_score_help' => 'The score for the article, score lower than it will be marked as read',
 		'default_system_prompt' => 'You are an assistant helping to analyze news articles and content. Analyze the content based on information value, depth, and relevance. Reply with a JSON object containing the following fields:
 1. translated_title: Provide a Chinese translation of the title if the original is not in Chinese; otherwise leave it empty
 2. tags: Extract 3-6 keyword tags

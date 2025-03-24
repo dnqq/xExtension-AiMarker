@@ -6,6 +6,8 @@ class AiMarkerExtension extends Minz_Extension {
 	// 定义配置默认值常量
 	const DEFAULT_MODEL = 'gpt-3.5-turbo';
 
+	const DEFAULT_THREAD_SCORE = 3.0;
+
 	public function init() {
 		$this->registerTranslates();
 		
@@ -24,6 +26,7 @@ class AiMarkerExtension extends Minz_Extension {
 			FreshRSS_Context::$user_conf->openai_proxy_url = Minz_Request::param('openai_proxy_url', '');
 			FreshRSS_Context::$user_conf->openai_model = Minz_Request::param('openai_model', self::DEFAULT_MODEL);
 			FreshRSS_Context::$user_conf->system_prompt = Minz_Request::param('system_prompt', $this->default_system_prompt);
+			FreshRSS_Context::$user_conf->thread_score = Minz_Request::param('thread_score', self::DEFAULT_THREAD_SCORE);
 			FreshRSS_Context::$user_conf->save();
 			
 			Minz_Request::good(_t('feedback.conf.updated'), array(
@@ -34,6 +37,12 @@ class AiMarkerExtension extends Minz_Extension {
 
 	
 	public function processArticleHook($entry) {
+
+		// 如果文章是更新而非新发布，则跳过处理, 参考https://github.com/FreshRSS/FreshRSS/discussions/5602
+		if ($entry->id() == null) {
+			//updated article not process
+			return $entry;
+		} 
 
 		// 存储文档原本的hash值，注：因为文档会根据title和内容作者进行hash排重，下面会修改相关的信息，所以预先保存
 		$originalHash = $entry->hash();
@@ -107,9 +116,10 @@ class AiMarkerExtension extends Minz_Extension {
 			
 			// 判断文章是否值得阅读
 			$isWorthReading = true;
+			$thread_score = FreshRSS_Context::$user_conf->thread_score ?? self::DEFAULT_THREAD_SCORE;
 			
-			// 检查quality_score是否大于4
-			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < 4.0) {
+			// 检查quality_score是否大于thread_score
+			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < (float)$thread_score) {
 				$isWorthReading = false;
 				Minz_Log::debug("文章得分:" . $result['quality_score'] . "，非必读文章: " . $title);
 			}

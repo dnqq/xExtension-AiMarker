@@ -10,6 +10,8 @@ return array(
 		'openai_model_help' => '输入OpenAI模型名称（例如：gpt-3.5-turbo、gpt-4、gpt-4-turbo）。您可以使用任何OpenAI API支持的模型。',
 		'system_prompt' => '系统提示词',
 		'system_prompt_help' => '指导AI如何分析文章并生成包含评估、摘要和翻译标题的JSON响应。',
+		'thread_score' => '文章质量分阈值',
+		'thread_score_help' => '如果文章质量分低于此值，则AI将不建议阅读该文章。',
 		'default_system_prompt' => '你是一个帮助分析新闻和文章的助手。请分析内容并根据信息价值、深度和相关性进行评价。回复必须是JSON对象格式，包含以下字段：
 1. translated_title：如果原文标题不是中文，提供中文翻译；否则留空
 2. tags：提取3-6个关键词标签

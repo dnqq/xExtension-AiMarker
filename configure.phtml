@@ -24,6 +24,14 @@
             <p class="help"><?php echo _t('ext.ai_marker.openai_model_help'); ?></p>
         </div>
     </div>
+
+    <div class="form-group">
+        <label class="group-name" for="thread_score"><?php echo _t('ext.ai_marker.thread_score'); ?></label>
+        <div class="group-controls">
+            <input type="text" name="thread_score" id="thread_score" value="<?php echo FreshRSS_Context::$user_conf->thread_score ?? ''; ?>" />
+            <p class="help"><?php echo _t('ext.ai_marker.thread_score_help'); ?></p>
+        </div>
+    </div>
     
     <div class="form-group">
         <label class="group-name" for="system_prompt"><?php echo _t('ext.ai_marker.system_prompt'); ?></label>
