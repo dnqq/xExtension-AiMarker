@@ -87,7 +87,7 @@ class AiMarkerExtension extends Minz_Extension {
 			// 添加翻译标题（如果有且原标题不是中文）
 			if (!empty($result['translated_title']) && !$this->containsChinese($title)) {
 				// $abstractHtml .= '<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>[标题]：</strong>' . $result['translated_title'] . '</div>';
-			        $entry->_title($translatedTitle);
+			        $entry->_title($result['translated_title']);
 			}
 
             // 添加评分和理由（如果有）
