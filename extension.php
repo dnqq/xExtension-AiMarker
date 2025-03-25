@@ -61,6 +61,10 @@ class AiMarkerExtension extends Minz_Extension {
 		
 		// 如果有返回JSON数据
 		if (is_array($result)) {
+
+
+			$thread_score = FreshRSS_Context::$user_conf->thread_score ?? self::DEFAULT_THREAD_SCORE;
+
 			// 准备摘要内容
 			$abstractHtml = '';
 			
@@ -73,7 +77,7 @@ class AiMarkerExtension extends Minz_Extension {
             // 添加评分和理由（如果有）
             if (isset($result['quality_score']) && is_numeric($result['quality_score'])) {
                 $score = (float)$result['quality_score'];
-                $scoreColor = $score < 3.0 ? '#e53935' : '#4caf50'; // 低于3分显示红色，否则显示绿色
+                $scoreColor = $score < (float)$thread_score ? '#e53935' : '#4caf50'; // 低于阈值显示红色，否则显示绿色
 
                 $abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid ' . $scoreColor . '; color: #333;">';
                 $abstractHtml .= '<strong>[评分]：</strong>' . $score;
@@ -116,7 +120,6 @@ class AiMarkerExtension extends Minz_Extension {
 			
 			// 判断文章是否值得阅读
 			$isWorthReading = true;
-			$thread_score = FreshRSS_Context::$user_conf->thread_score ?? self::DEFAULT_THREAD_SCORE;
 			
 			// 检查quality_score是否大于thread_score
 			if (isset($result['quality_score']) && is_numeric($result['quality_score']) && (float)$result['quality_score'] < (float)$thread_score) {
