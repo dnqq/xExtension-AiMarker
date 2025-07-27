@@ -84,7 +84,7 @@ class AiMarkerExtension extends Minz_Extension {
 
                 // 如果有评价理由，添加到评分后面
                 if (!empty($result['evaluation_reason'])) {
-                    $abstractHtml .= '<br><strong>[理由]：</strong>' . nl2br($result['evaluation_reason']);
+                    $abstractHtml .= '<br><strong>[理由]：</strong>' . $this->renderSimpleMarkdown($result['evaluation_reason']);
                 }
 
                 $abstractHtml .= '</div>';
@@ -92,7 +92,7 @@ class AiMarkerExtension extends Minz_Extension {
 			
 			// 添加文章摘要（如果有）
 			if (!empty($result['abstract'])) {
-				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . nl2br($result['abstract']) . '</div>';
+				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . $this->renderSimpleMarkdown($result['abstract']) . '</div>';
 			}
 			
 			// 如果有摘要或翻译标题，添加到内容前
@@ -285,5 +285,18 @@ class AiMarkerExtension extends Minz_Extension {
 		
 		curl_close($ch);
 		return $response;
+	}
+
+	private function renderSimpleMarkdown($text) {
+		// 1. Convert **bold** to <strong>bold</strong>
+		$html = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $text);
+	
+		// 2. Convert --- to <hr> for visual separation
+		$html = str_replace('---', '<hr style="border: none; border-top: 1px solid #eee; margin: 1em 0;">', $html);
+	
+		// 3. Convert newlines to <br>
+		$html = nl2br($html, false);
+	
+		return $html;
 	}
 }
