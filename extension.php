@@ -84,7 +84,7 @@ class AiMarkerExtension extends Minz_Extension {
 
                 // 如果有评价理由，添加到评分后面
                 if (!empty($result['evaluation_reason'])) {
-                    $abstractHtml .= '<br><strong>[理由]：</strong>' . $result['evaluation_reason'];
+                    $abstractHtml .= '<br><strong>[理由]：</strong>' . nl2br($result['evaluation_reason']);
                 }
 
                 $abstractHtml .= '</div>';
@@ -92,7 +92,7 @@ class AiMarkerExtension extends Minz_Extension {
 			
 			// 添加文章摘要（如果有）
 			if (!empty($result['abstract'])) {
-				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . $result['abstract'] . '</div>';
+				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . nl2br($result['abstract']) . '</div>';
 			}
 			
 			// 如果有摘要或翻译标题，添加到内容前
@@ -100,18 +100,28 @@ class AiMarkerExtension extends Minz_Extension {
 				$entry->_content($abstractHtml . $content);
 			}
 			
-			// 如果有标签，设置为文章标签
-			if (!empty($result['tags']) && is_array($result['tags'])) {
-				// 将现有标签和AI生成的标签合并
+			// 准备要添加的标签
+			$aiTags = $result['tags'] ?? [];
+			if (!is_array($aiTags)) {
+				$aiTags = []; // 安全检查
+			}
+
+			// 如果有评分，则添加评分标签
+			if (isset($result['quality_score']) && is_numeric($result['quality_score'])) {
+				$scoreTag = 'AI评分: ' . round((float)$result['quality_score']);
+				$aiTags[] = $scoreTag;
+			}
+
+			// 如果有任何AI生成的标签（包括评分标签），则进行合并和设置
+			if (!empty($aiTags)) {
 				$currentTags = $entry->tags();
-				$aiTags = $result['tags'];
 				
 				// 确保所有标签都是字符串
 				foreach ($aiTags as &$tag) {
 					$tag = (string)$tag;
 				}
 				
-				// 合并标签并去重
+				// 合并所有标签并去重
 				$allTags = array_unique(array_merge($currentTags, $aiTags));
 				
 				// 设置文章标签
