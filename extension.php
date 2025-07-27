@@ -65,39 +65,49 @@ class AiMarkerExtension extends Minz_Extension {
 
 			$thread_score = FreshRSS_Context::$user_conf->thread_score ?? self::DEFAULT_THREAD_SCORE;
 
-			// 准备摘要内容
-			$abstractHtml = '';
-			
 			// 添加翻译标题（如果有且原标题不是中文）
 			if (!empty($result['translated_title']) && !$this->containsChinese($title)) {
-				// $abstractHtml .= '<div style="padding: 10px; margin-bottom: 5px; background-color: #f0f7ff; border-left: 4px solid #007bff; color: #333;"><strong>[标题]：</strong>' . $result['translated_title'] . '</div>';
 			    $entry->_title($result['translated_title']);
 			}
 
-            // 添加评分和理由（如果有）
-            if (isset($result['quality_score']) && is_numeric($result['quality_score'])) {
-                $score = (float)$result['quality_score'];
-                $scoreColor = $score < (float)$thread_score ? '#e53935' : '#4caf50'; // 低于阈值显示红色，否则显示绿色
+			// 准备AI分析内容的内部HTML
+			$aiContentHtml = '';
 
-                $abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid ' . $scoreColor . '; color: #333;">';
-                $abstractHtml .= '<strong>[评分]：</strong>' . $score;
+			// 添加评分和理由
+			if (isset($result['quality_score']) && is_numeric($result['quality_score'])) {
+				$score = (float)$result['quality_score'];
+				$scoreColor = $score < (float)$thread_score ? '#e53935' : '#4caf50';
 
-                // 如果有评价理由，添加到评分后面
-                if (!empty($result['evaluation_reason'])) {
-                    $abstractHtml .= '<br><strong>[理由]：</strong>' . $this->renderSimpleMarkdown($result['evaluation_reason']);
-                }
+				$aiContentHtml .= '<div style="padding: 5px 0;">';
+				$aiContentHtml .= '<strong>[评分]：</strong><span style="color: ' . $scoreColor . '; font-weight: bold;">' . $score . '</span>';
 
-                $abstractHtml .= '</div>';
-            }
-			
-			// 添加文章摘要（如果有）
-			if (!empty($result['abstract'])) {
-				$abstractHtml .= '<div style="padding: 10px; margin-bottom: 15px; background-color: #f9f9f9; border-left: 4px solid #4caf50; color: #333;"><strong>[摘要]：</strong>' . $this->renderSimpleMarkdown($result['abstract']) . '</div>';
+				if (!empty($result['evaluation_reason'])) {
+					$aiContentHtml .= '<br><strong>[理由]：</strong>' . $this->renderSimpleMarkdown($result['evaluation_reason']);
+				}
+				$aiContentHtml .= '</div>';
 			}
-			
-			// 如果有摘要或翻译标题，添加到内容前
-			if (!empty($abstractHtml)) {
-				$entry->_content($abstractHtml . $content);
+
+			// 添加文章摘要
+			if (!empty($result['abstract'])) {
+				if (!empty($aiContentHtml)) {
+					$aiContentHtml .= '<hr style="border: none; border-top: 1px dashed #ccc; margin: 8px 0;">';
+				}
+				$aiContentHtml .= '<div style="padding: 5px 0;"><strong>[摘要]：</strong><br>' . $this->renderSimpleMarkdown($result['abstract']) . '</div>';
+			}
+
+			// 如果有AI生成的内容，则用可折叠框包裹并添加到内容前
+			if (!empty($aiContentHtml)) {
+				$finalHtml = '
+					<details open style="border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 1.5em; background-color: #fdfdfd; font-size: 14px; line-height: 1.6;">
+						<summary style="padding: 12px; font-weight: bold; cursor: pointer; outline: none; display: list-item;">
+							🤖 AI 智能分析 (点击展开/折叠)
+						</summary>
+						<div style="padding: 0 15px 15px; border-top: 1px solid #e0e0e0;">
+							' . $aiContentHtml . '
+						</div>
+					</details>
+				';
+				$entry->_content($finalHtml . $content);
 			}
 			
 			// 准备要添加的标签
@@ -291,8 +301,8 @@ class AiMarkerExtension extends Minz_Extension {
 		// 1. Convert **bold** to <strong>bold</strong>
 		$html = preg_replace('/\*\*(.*?)\*\*/s', '<strong>$1</strong>', $text);
 	
-		// 2. Convert --- to <hr> for visual separation
-		$html = str_replace('---', '<hr style="border: none; border-top: 1px solid #eee; margin: 1em 0;">', $html);
+		// 2. Convert --- to <hr> with less margin
+		$html = str_replace('---', '<hr style="border: none; border-top: 1px solid #eee; margin: 0.8em 0;">', $html);
 	
 		// 3. Convert newlines to <br>
 		$html = nl2br($html, false);
